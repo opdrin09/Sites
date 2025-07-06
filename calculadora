@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Avançada de Dinâmica Veicular</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+        .input-field {
+            background-color: #1f2937; /* gray-800 */
+            border-color: #4b5563; /* gray-600 */
+            color: #f3f4f6; /* gray-100 */
+        }
+        .input-field:focus, .select-field:focus {
+            --tw-ring-color: #3b82f6; /* blue-500 */
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .select-field {
+            background-color: #1f2937;
+            border-color: #4b5563;
+            color: #f3f4f6;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        .result-limit-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .aspect-w-16 { width: 100%; padding-bottom: 56.25%; position: relative; }
+        .aspect-w-16 > * { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-6xl bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl border border-gray-700">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-400">Calculadora de Dinâmica Veicular</h1>
+            <p class="text-gray-400 mt-2">Análise de velocidades críticas com cenários contextualizados para o Brasil.</p>
+        </div>
+
+        <!-- Inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 mb-8">
+            <!-- Raio da Curva -->
+            <div class="flex flex-col space-y-2">
+                <label for="raio_preset" class="text-sm font-medium text-gray-400">Cenário da Curva (Raio)</label>
+                <select id="raio_preset" class="select-field w-full p-3 rounded-lg" onchange="updateFromPreset('raio')"></select>
+                <div class="relative">
+                    <input type="number" id="raio_input" class="input-field w-full p-3 rounded-lg font-mono" oninput="calculate()">
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">m</span>
+                </div>
+                <span id="raio_justificativa" class="text-xs text-gray-500 h-8"></span>
+            </div>
+
+            <!-- Coeficiente de Atrito -->
+            <div class="flex flex-col space-y-2">
+                <label for="atrito_preset" class="text-sm font-medium text-gray-400">Cenário de Aderência (Atrito)</label>
+                <select id="atrito_preset" class="select-field w-full p-3 rounded-lg" onchange="updateFromPreset('atrito')"></select>
+                <div class="relative">
+                    <input type="number" id="atrito_input" step="0.01" class="input-field w-full p-3 rounded-lg font-mono" oninput="calculate()">
+                </div>
+                 <span id="atrito_justificativa" class="text-xs text-gray-500 h-8"></span>
+            </div>
+
+            <!-- Outros Parâmetros -->
+            <div class="flex flex-col space-y-2">
+                 <label class="text-sm font-medium text-gray-400">Parâmetros Adicionais</label>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label for="angulo_pista" class="text-xs text-gray-500">Ângulo Pista (θ)</label>
+                        <div class="relative">
+                            <input type="number" id="angulo_pista" value="5" class="input-field w-full p-3 rounded-lg font-mono" oninput="calculate()">
+                            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">°</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="angulo_veiculo" class="text-xs text-gray-500">Incl. Máxima Veículo (φ)</label>
+                        <div class="relative">
+                            <input type="number" id="angulo_veiculo" value="45" class="input-field w-full p-3 rounded-lg font-mono" oninput="calculate()">
+                            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">°</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="gravidade" class="text-xs text-gray-500">Gravidade (g)</label>
+                        <div class="relative">
+                            <input type="number" id="gravidade" value="9.81" step="0.01" class="input-field w-full p-3 rounded-lg font-mono" oninput="calculate()">
+                        </div>
+                    </div>
+                </div>
+                 <button id="videoBtn" class="mt-auto w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold py-3 rounded-lg transition-colors">Ver Vídeo de Conscientização</button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="message" class="mb-6 p-4 text-center rounded-lg text-sm hidden"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Cenário A: Carro -->
+            <div class="bg-gray-800/50 border border-gray-700 p-6 rounded-xl">
+                <h2 class="text-xl font-semibold text-center text-green-400 mb-4">Cenário A: Veículo sem Inclinação (Carro)</h2>
+                <div class="space-y-4" id="results_a"></div>
+            </div>
+            <!-- Cenário B: Moto -->
+            <div class="bg-gray-800/50 border border-gray-700 p-6 rounded-xl">
+                <h2 class="text-xl font-semibold text-center text-purple-400 mb-4">Cenário B: Veículo com Inclinação (Moto)</h2>
+                <div class="space-y-4" id="results_b"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal do Vídeo -->
+    <div id="videoModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl relative">
+            <button id="closeModalBtn" class="absolute -top-4 -right-4 text-white bg-red-600 rounded-full h-10 w-10 flex items-center justify-center text-2xl font-bold">&times;</button>
+            <div class="aspect-w-16">
+                <iframe id="youtubeVideo" class="rounded-t-lg" width="100%" height="100%" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <p class="p-4 text-center text-gray-300">Dirigir com segurança é um ato de responsabilidade com você e com todos ao seu redor.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- BANCO DE DADOS DE PRESETS ---
+        const presets = {
+            raio: [
+                { s: "Rodovia Pista Dupla (Classe 0, Relevo Plano)", r: "700m-2000m", d: 1100, j: "Projetado para Vp=120 km/h, conforto em alta velocidade." },
+                { s: "Rodovia Pista Dupla (Classe 0, Relevo Ondulado)", r: "400m-1200m", d: 650, j: "Projetado para Vp=100 km/h em terreno ondulado." },
+                { s: "Rodovia Pista Simples (Classe II, Relevo Plano)", r: "400m-1000m", d: 550, j: "Projetado para Vp=100 km/h, padrão comum em BRs." },
+                { s: "Rodovia Pista Simples (Classe III, Relevo Ondulado)", r: "120m-400m", d: 250, j: "Vp=60-80 km/h, rodovias mais antigas ou sinuosas." },
+                { s: "Estrada Serrana (Pista Dupla, Projeto Moderno)", r: "250m-600m", d: 400, j: "Vp=80 km/h, geometria otimizada para segurança em serra." },
+                { s: "Estrada Serrana (Pista Simples, Projeto Antigo)", r: "50m-150m", d: 90, j: "Vp=40-60 km/h, relevo acidentado e restrições físicas." },
+                { s: "Marginal de Metrópole (Pista Principal)", r: "500m-1500m", d: 800, j: "Vp=70-90 km/h, curvas abertas para fluidez do tráfego." },
+                { s: "Alça de Acesso Rodoviário", r: "80m-250m", d: 150, j: "Vp=60-80 km/h, transição entre vias de alta velocidade." },
+                { s: "Alça de Acesso e Viaduto Urbano", r: "30m-90m", d: 55, j: "Vp=40-60 km/h, fortes restrições de espaço urbano." },
+                { s: "Avenida Urbana de Tráfego Rápido", r: "150m-400m", d: 250, j: "Vp=60-70 km/h, via arterial principal." },
+                { s: "Rotatória Urbana de Grande Porte", r: "25m-50m", d: 35, j: "Projetado para acalmar o tráfego, Vp=40-50 km/h." },
+                { s: "Rua de Bairro (Esquina 90°)", r: "10m-25m", d: 15, j: "Raio efetivo da trajetória do veículo em baixa velocidade." },
+                { s: "Estrada Vicinal Asfaltada", r: "120m-300m", d: 180, j: "Baixo volume, Vp típica de 60 km/h." },
+                { s: "Estrada Vicinal Não Pavimentada", r: "50m-200m", d: 100, j: "Geometria definida pela topografia, não por projeto." }
+            ],
+            atrito: [
+                { s: "Carro, pneu novo, asfalto novo e seco", r: "0.8-1.0", d: 0.9, j: "Condição ideal, máxima aderência mecânica e molecular." },
+                { s: "Esportivo, pneu performance, asfalto seco", r: "0.9-1.2", d: 1.05, j: "Composto de borracha mais macio para alta performance." },
+                { s: "Carro, pneu novo, asfalto polido e seco", r: "0.6-0.75", d: 0.7, j: "Perda de microtextura reduz a componente de adesão." },
+                { s: "Carro, pneu novo, paralelepípedo seco", r: "0.5-0.7", d: 0.6, j: "Superfície irregular e juntas reduzem a área de contato." },
+                { s: "Carro, pneu novo, terra compactada seca", r: "0.5-0.7", d: 0.6, j: "Atrito entre borracha e solo/agregado." },
+                { s: "Carro, pneu novo, asfalto novo e molhado", r: "0.5-0.7", d: 0.6, j: "Água como lubrificante, atrito dominado pela histerese." },
+                { s: "Carro, pneu novo, asfalto úmido e sujo (1ª chuva)", r: "0.3-0.5", d: 0.4, j: "Formação de pasta lubrificante com óleo e poeira." },
+                { s: "Carro, pneu novo, paralelepípedo molhado", r: "0.3-0.5", d: 0.4, j: "Combinação de superfície irregular com lubrificação." },
+                { s: "Carro, pneu novo, asfalto com lama/folhas", r: "0.1-0.3", d: 0.2, j: "Camada de cisalhamento de baixa resistência." },
+                { s: "Carro, pneu GASTO, asfalto novo e seco", r: "0.85-1.0", d: 0.95, j: "Inversão de desempenho: maior área de contato aumenta atrito." },
+                { s: "Carro, pneu GASTO, asfalto novo e molhado", r: "0.1-0.4", d: 0.25, j: "Risco extremo de aquaplanagem; sulcos inexistentes." },
+                { s: "Carro, pneu meia-vida, asfalto gasto e molhado", r: "0.4-0.55", d: 0.45, j: "Cenário comum de degradação combinada de pneu e pista." },
+                { s: "Caminhão carregado, pneu bom, asfalto molhado", r: "0.4-0.6", d: 0.5, j: "Limite da manobra é o tombamento, não a derrapagem." },
+                { s: "SUV, pneu meia-vida, estrada de terra molhada (lama)", r: "0.2-0.35", d: 0.25, j: "Baixa aderência e CG alto." },
+                { s: "Moto esportiva, pneu novo, asfalto novo/seco", r: "0.9-1.3", d: 1.1, j: "Pneus de alta performance com compostos macios." },
+                { s: "Moto (Touring), pneu touring novo, asfalto molhado", r: "0.45-0.65", d: 0.55, j: "Pneu projetado para chuva, mas com menor área de contato." },
+                { s: "Moto (Custom), pneu duro, asfalto gasto e seco", r: "0.6-0.75", d: 0.65, j: "Composto duro combinado com pista com microtextura gasta." },
+                { s: "Moto (Trail), pneu misto, asfalto seco", r: "0.6-0.8", d: 0.7, j: "Menor área de contato no asfalto devido ao desenho." },
+                { s: "Moto (Trail), pneu misto, terra seca e compactada", r: "0.55-0.75", d: 0.65, j: "Pneu com cravos que melhoram a tração em solo." },
+                { s: "Moto (qualquer), pneu GASTO, asfalto molhado", r: "0.1-0.25", d: 0.15, j: "Risco extremo de aquaplanagem para motos." },
+                { s: "Moto (qualquer), pneu baixa calibragem, asfalto seco", r: "0.7-0.85", d: 0.75, j: "Deformação do pneu afeta a estabilidade." },
+                { s: "Moto, pneu bom, paralelepípedo molhado", r: "0.25-0.4", d: 0.3, j: "Um dos cenários de maior risco para motociclistas." },
+                { s: "Moto, pneu bom, asfalto com cascalho/areia", r: "0.3-0.5", d: 0.4, j: "Contaminantes agem como rolamentos, causando perda súbita." },
+                { s: "Moto, pneu bom, sobre pintura de sinalização molhada", r: "0.2-0.35", d: 0.25, j: "Superfície lisa e não porosa com água oferece aderência mínima." },
+                { s: "Moto, pneu bom, sobre grelha metálica molhada", r: "0.1-0.2", d: 0.15, j: "Contato metal-borracha com água oferece aderência mínima." }
+            ]
+        };
+
+        // --- FUNÇÕES DE INICIALIZAÇÃO E MANIPULAÇÃO DO DOM ---
+        
+        function populateDropdowns() {
+            const raioPreset = document.getElementById('raio_preset');
+            const atritoPreset = document.getElementById('atrito_preset');
+
+            presets.raio.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.d;
+                option.textContent = p.s;
+                raioPreset.appendChild(option);
+            });
+
+            presets.atrito.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.d;
+                option.textContent = p.s;
+                atritoPreset.appendChild(option);
+            });
+        }
+
+        function updateFromPreset(type) {
+            const presetSelect = document.getElementById(`${type}_preset`);
+            const inputField = document.getElementById(`${type}_input`);
+            const justificativaEl = document.getElementById(`${type}_justificativa`);
+            
+            const selectedIndex = presetSelect.selectedIndex;
+            const selectedPreset = presets[type][selectedIndex];
+            
+            inputField.value = selectedPreset.d;
+            justificativaEl.textContent = `Range: ${selectedPreset.r}. ${selectedPreset.j}`;
+            
+            calculate();
+        }
+
+        function displayResult(containerId, data) {
+            const container = document.getElementById(containerId);
+            let content = '';
+            data.forEach(item => {
+                const value_kmh = item.value_ms * 3.6;
+                const formatted_value = !isFinite(item.value_ms) || item.value_ms < 0
+                    ? '<span class="text-red-400">Não Aplicável</span>'
+                    : `${value_kmh.toFixed(2)} <span class="text-xs opacity-70">km/h</span> <br> <span class="text-xs opacity-60">${item.value_ms.toFixed(2)} m/s</span>`;
+
+                content += `
+                    <div class="bg-gray-900/70 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold ${item.color}">${item.label}</span>
+                            ${item.limit ? `<div class="result-limit-label ${item.limit_bg} ${item.limit_color}">${item.limit}</div>` : ''}
+                        </div>
+                        <div class="text-right font-mono text-lg mt-1">${formatted_value}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = content;
+        }
+
+        // --- LÓGICA DE CÁLCULO ---
+
+        function calculate() {
+            // 1. Obter valores dos inputs
+            const R = parseFloat(document.getElementById('raio_input').value);
+            const mu_s = parseFloat(document.getElementById('atrito_input').value);
+            const theta_deg = parseFloat(document.getElementById('angulo_pista').value);
+            const phi_deg = parseFloat(document.getElementById('angulo_veiculo').value);
+            const g = parseFloat(document.getElementById('gravidade').value);
+            const messageEl = document.getElementById('message');
+
+            if (isNaN(R) || isNaN(mu_s) || isNaN(theta_deg) || isNaN(phi_deg) || isNaN(g)) return;
+
+            // 2. Preparações
+            messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm hidden';
+            const theta_rad = theta_deg * (Math.PI / 180);
+            const phi_rad = phi_deg * (Math.PI / 180);
+            const sin_t = Math.sin(theta_rad);
+            const cos_t = Math.cos(theta_rad);
+            const tan_t = Math.tan(theta_rad);
+
+            // 3. Cálculos de Velocidade (baseados em derrapagem)
+            let v_max_derrapagem_ms = Infinity;
+            const vmax_den = cos_t - mu_s * sin_t;
+            if (vmax_den > 0) {
+                v_max_derrapagem_ms = Math.sqrt(R * g * ((sin_t + mu_s * cos_t) / vmax_den));
+            } else {
+                messageEl.textContent = 'Aviso: Com esta inclinação e atrito, a derrapagem para fora da curva é inevitável.';
+                messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm bg-red-900/50 text-red-300 block';
+            }
+
+            let v_min_derrapagem_ms = 0;
+            const vmin_num = sin_t - mu_s * cos_t;
+            if (vmin_num > 0) {
+                v_min_derrapagem_ms = Math.sqrt(R * g * (vmin_num / (cos_t + mu_s * sin_t)));
+            } else {
+                 if (!messageEl.textContent) {
+                    messageEl.textContent = 'Info: O atrito é suficiente para segurar o veículo mesmo a 0 km/h.';
+                    messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm bg-blue-900/50 text-blue-300 block';
+                 }
+            }
+            
+            const v_seg_ms = (tan_t >= 0) ? Math.sqrt(R * g * tan_t) : 0;
+
+            // 4. Cálculos de Velocidade (baseados em tombamento)
+            const alpha_max_rad = theta_rad + phi_rad;
+            const v_max_tombamento_ms = Math.abs(alpha_max_rad % Math.PI) !== Math.PI / 2 ? Math.sqrt(g * R * Math.tan(alpha_max_rad)) : Infinity;
+            
+            // 5. Determinar velocidades finais e fatores limitantes
+            const v_max_a = v_max_derrapagem_ms;
+            const v_min_a = v_min_derrapagem_ms;
+            
+            const v_max_b = Math.min(v_max_derrapagem_ms, v_max_tombamento_ms);
+            const v_min_b = v_min_derrapagem_ms; // Para v_min, o limite é sempre a derrapagem para baixo.
+            
+            const vmax_b_limit = v_max_derrapagem_ms < v_max_tombamento_ms ? 'Derrapagem' : 'Tombamento';
+
+            // 6. Preparar dados para exibição
+            const resultsDataA = [
+                { label: 'Velocidade Máxima', value_ms: v_max_a, color: 'text-red-400' },
+                { label: 'Velocidade de Segurança', value_ms: v_seg_ms, color: 'text-blue-400' },
+                { label: 'Velocidade Mínima', value_ms: v_min_a, color: 'text-yellow-400' }
+            ];
+
+            const resultsDataB = [
+                { label: 'Velocidade Máxima', value_ms: v_max_b, color: 'text-red-400', limit: vmax_b_limit, limit_bg: 'bg-red-500/20', limit_color: 'text-red-300' },
+                { label: 'Velocidade de Segurança', value_ms: v_seg_ms, color: 'text-blue-400' },
+                { label: 'Velocidade Mínima', value_ms: v_min_b, color: 'text-yellow-400', limit: 'Derrapagem', limit_bg: 'bg-yellow-500/20', limit_color: 'text-yellow-300' }
+            ];
+
+            displayResult('results_a', resultsDataA);
+            displayResult('results_b', resultsDataB);
+        }
+
+        // --- MODAL DO VÍDEO ---
+        const videoModal = document.getElementById('videoModal');
+        const videoBtn = document.getElementById('videoBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const youtubeVideo = document.getElementById('youtubeVideo');
+        const videoEmbedSrc = "https://www.youtube.com/embed/DAx2-7CxgTI";
+
+        videoBtn.onclick = () => {
+            youtubeVideo.src = videoEmbedSrc;
+            videoModal.classList.remove('hidden');
+        };
+        closeModalBtn.onclick = () => {
+            videoModal.classList.add('hidden');
+            youtubeVideo.src = ''; // Para o vídeo ao fechar
+        };
+        videoModal.onclick = (e) => {
+            if (e.target === videoModal) {
+                closeModalBtn.click();
+            }
+        };
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = () => {
+            populateDropdowns();
+            updateFromPreset('raio');
+            updateFromPreset('atrito'); // Chama duas vezes para garantir que ambos os defaults sejam carregados.
+        };
+    </script>
+</body>
+</html>

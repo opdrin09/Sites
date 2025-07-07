@@ -50,9 +50,14 @@
 <body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-6xl bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl border border-gray-700">
-        <div class="text-center mb-8">
+        <div class="text-center mb-6">
             <h1 class="text-3xl font-bold text-blue-400">Calculadora de Dinâmica Veicular</h1>
             <p class="text-gray-400 mt-2">Análise de velocidades críticas com cenários contextualizados para o Brasil.</p>
+        </div>
+
+        <!-- NOVO: Disclaimer -->
+        <div id="disclaimer" class="bg-yellow-900/40 border border-yellow-700 text-yellow-300 text-sm p-4 rounded-lg mb-6 text-center">
+            <strong>Atenção:</strong> Os valores dos cenários são médias para fins educacionais. As condições reais variam. Recomenda-se fortemente que você ajuste os parâmetros manualmente para refletir sua situação específica.
         </div>
 
         <!-- Inputs -->
@@ -107,8 +112,11 @@
             </div>
         </div>
 
-        <!-- Results -->
+        <!-- Mensagens de Aviso -->
+        <div id="moto_angle_warning" class="mb-4 bg-purple-900/50 border border-purple-700 text-purple-300 text-sm p-3 rounded-lg text-center hidden"></div>
         <div id="message" class="mb-6 p-4 text-center rounded-lg text-sm hidden"></div>
+        
+        <!-- Results -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Cenário A: Carro -->
             <div class="bg-gray-800/50 border border-gray-700 p-6 rounded-xl">
@@ -120,6 +128,16 @@
                 <h2 class="text-xl font-semibold text-center text-purple-400 mb-4">Cenário B: Veículo com Inclinação (Moto)</h2>
                 <div class="space-y-4" id="results_b"></div>
             </div>
+        </div>
+
+        <!-- NOVO: Limitações do Modelo -->
+        <div id="limitations" class="mt-8 text-xs text-gray-500 border-t border-gray-700 pt-4">
+            <h4 class="font-semibold text-gray-400 mb-2">Limitações do Modelo Físico:</h4>
+            <ul class="list-disc list-inside space-y-1">
+                <li>Este modelo é idealizado e não considera fatores complexos como efeitos aerodinâmicos (sustentação ou downforce), a dinâmica da suspensão, a deformação e aquecimento dos pneus, ou a transferência de carga lateral.</li>
+                <li>Assume-se um coeficiente de atrito constante, que na realidade varia com a velocidade e o deslizamento do pneu.</li>
+                <li>Os cálculos são para um estado de equilíbrio em movimento circular uniforme, não abrangendo manobras transitórias (aceleração/frenagem em curva).</li>
+            </ul>
         </div>
     </div>
 
@@ -135,7 +153,6 @@
     </div>
 
     <script>
-        // --- BANCO DE DADOS DE PRESETS ---
         const presets = {
             raio: [
                 { s: "Rodovia Pista Dupla (Classe 0, Relevo Plano)", r: "700m-2000m", d: 1100, j: "Projetado para Vp=120 km/h, conforto em alta velocidade." },
@@ -182,23 +199,17 @@
             ]
         };
 
-        // --- FUNÇÕES DE INICIALIZAÇÃO E MANIPULAÇÃO DO DOM ---
-        
         function populateDropdowns() {
             const raioPreset = document.getElementById('raio_preset');
             const atritoPreset = document.getElementById('atrito_preset');
-
             presets.raio.forEach(p => {
                 const option = document.createElement('option');
-                option.value = p.d;
-                option.textContent = p.s;
+                option.value = p.d; option.textContent = p.s;
                 raioPreset.appendChild(option);
             });
-
             presets.atrito.forEach(p => {
                 const option = document.createElement('option');
-                option.value = p.d;
-                option.textContent = p.s;
+                option.value = p.d; option.textContent = p.s;
                 atritoPreset.appendChild(option);
             });
         }
@@ -207,13 +218,10 @@
             const presetSelect = document.getElementById(`${type}_preset`);
             const inputField = document.getElementById(`${type}_input`);
             const justificativaEl = document.getElementById(`${type}_justificativa`);
-            
             const selectedIndex = presetSelect.selectedIndex;
             const selectedPreset = presets[type][selectedIndex];
-            
             inputField.value = selectedPreset.d;
             justificativaEl.textContent = `Range: ${selectedPreset.r}. ${selectedPreset.j}`;
-            
             calculate();
         }
 
@@ -222,81 +230,85 @@
             let content = '';
             data.forEach(item => {
                 const value_kmh = item.value_ms * 3.6;
-                const formatted_value = !isFinite(item.value_ms) || item.value_ms < 0
+                const formatted_value = isNaN(item.value_ms)
                     ? '<span class="text-red-400">Não Aplicável</span>'
                     : `${value_kmh.toFixed(2)} <span class="text-xs opacity-70">km/h</span> <br> <span class="text-xs opacity-60">${item.value_ms.toFixed(2)} m/s</span>`;
 
-                content += `
-                    <div class="bg-gray-900/70 p-4 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <span class="font-semibold ${item.color}">${item.label}</span>
-                            ${item.limit ? `<div class="result-limit-label ${item.limit_bg} ${item.limit_color}">${item.limit}</div>` : ''}
-                        </div>
-                        <div class="text-right font-mono text-lg mt-1">${formatted_value}</div>
-                    </div>
-                `;
+                content += `<div class="bg-gray-900/70 p-4 rounded-lg"><div class="flex justify-between items-center"><span class="font-semibold ${item.color}">${item.label}</span>${item.limit ? `<div class="result-limit-label ${item.limit_bg} ${item.limit_color}">${item.limit}</div>` : ''}</div><div class="text-right font-mono text-lg mt-1">${formatted_value}</div></div>`;
             });
             container.innerHTML = content;
         }
 
-        // --- LÓGICA DE CÁLCULO ---
-
         function calculate() {
-            // 1. Obter valores dos inputs
             const R = parseFloat(document.getElementById('raio_input').value);
             const mu_s = parseFloat(document.getElementById('atrito_input').value);
             const theta_deg = parseFloat(document.getElementById('angulo_pista').value);
-            const phi_deg = parseFloat(document.getElementById('angulo_veiculo').value);
+            const phi_deg_original = parseFloat(document.getElementById('angulo_veiculo').value);
             const g = parseFloat(document.getElementById('gravidade').value);
             const messageEl = document.getElementById('message');
+            const motoWarningEl = document.getElementById('moto_angle_warning');
 
-            if (isNaN(R) || isNaN(mu_s) || isNaN(theta_deg) || isNaN(phi_deg) || isNaN(g)) return;
+            if (isNaN(R) || isNaN(mu_s) || isNaN(theta_deg) || isNaN(phi_deg_original) || isNaN(g)) return;
 
-            // 2. Preparações
             messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm hidden';
+            motoWarningEl.className = 'mb-4 ... hidden';
+
+            let phi_deg = phi_deg_original;
+            if (theta_deg + phi_deg_original >= 90.0) {
+                phi_deg = 89.9 - theta_deg;
+                motoWarningEl.textContent = `Aviso: Para θ=${theta_deg.toFixed(1)}°, a inclinação máxima da moto (φ) foi limitada a ${phi_deg.toFixed(1)}° para manter a estabilidade. Recomenda-se ajustar manualmente para um valor menor.`;
+                motoWarningEl.classList.remove('hidden');
+            }
+
             const theta_rad = theta_deg * (Math.PI / 180);
             const phi_rad = phi_deg * (Math.PI / 180);
             const sin_t = Math.sin(theta_rad);
             const cos_t = Math.cos(theta_rad);
-            const tan_t = Math.tan(theta_rad);
 
-            // 3. Cálculos de Velocidade (baseados em derrapagem)
-            let v_max_derrapagem_ms = Infinity;
+            let v_max_derrapagem_ms = NaN;
             const vmax_den = cos_t - mu_s * sin_t;
             if (vmax_den > 0) {
                 v_max_derrapagem_ms = Math.sqrt(R * g * ((sin_t + mu_s * cos_t) / vmax_den));
             } else {
-                messageEl.textContent = 'Aviso: Com esta inclinação e atrito, a derrapagem para fora da curva é inevitável.';
+                messageEl.textContent = 'Aviso: Com esta inclinação e atrito, o sistema se torna instável e o modelo não pode prever um limite de velocidade máxima. A derrapagem pode ocorrer para dentro ou fora da curva dependendo da velocidade.';
                 messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm bg-red-900/50 text-red-300 block';
             }
 
-            let v_min_derrapagem_ms = 0;
-            const vmin_num = sin_t - mu_s * cos_t;
-            if (vmin_num > 0) {
-                v_min_derrapagem_ms = Math.sqrt(R * g * (vmin_num / (cos_t + mu_s * sin_t)));
+            let v_min_derrapagem_ms = NaN;
+            if (theta_deg < 0) {
+                v_min_derrapagem_ms = NaN;
             } else {
-                 if (!messageEl.textContent) {
-                    messageEl.textContent = 'Info: O atrito é suficiente para segurar o veículo mesmo a 0 km/h.';
-                    messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm bg-blue-900/50 text-blue-300 block';
-                 }
+                const vmin_num = sin_t - mu_s * cos_t;
+                if (vmin_num > 0) {
+                    v_min_derrapagem_ms = Math.sqrt(R * g * (vmin_num / (cos_t + mu_s * sin_t)));
+                } else {
+                    v_min_derrapagem_ms = 0;
+                    if (!messageEl.textContent) {
+                        messageEl.textContent = 'Info: O atrito é suficiente para segurar o veículo mesmo a 0 km/h.';
+                        messageEl.className = 'mb-6 p-4 text-center rounded-lg text-sm bg-blue-900/50 text-blue-300 block';
+                    }
+                }
             }
             
-            const v_seg_ms = (tan_t >= 0) ? Math.sqrt(R * g * tan_t) : 0;
+            let v_seg_ms = NaN;
+            if (theta_deg >= 0) {
+                v_seg_ms = Math.sqrt(R * g * Math.tan(theta_rad));
+            }
 
-            // 4. Cálculos de Velocidade (baseados em tombamento)
             const alpha_max_rad = theta_rad + phi_rad;
-            const v_max_tombamento_ms = Math.abs(alpha_max_rad % Math.PI) !== Math.PI / 2 ? Math.sqrt(g * R * Math.tan(alpha_max_rad)) : Infinity;
-            
-            // 5. Determinar velocidades finais e fatores limitantes
+            let v_max_tombamento_ms = NaN;
+            if (Math.tan(alpha_max_rad) >= 0) {
+                 v_max_tombamento_ms = Math.sqrt(g * R * Math.tan(alpha_max_rad));
+            }
+
             const v_max_a = v_max_derrapagem_ms;
             const v_min_a = v_min_derrapagem_ms;
             
             const v_max_b = Math.min(v_max_derrapagem_ms, v_max_tombamento_ms);
-            const v_min_b = v_min_derrapagem_ms; // Para v_min, o limite é sempre a derrapagem para baixo.
+            const v_min_b = v_min_derrapagem_ms;
             
             const vmax_b_limit = v_max_derrapagem_ms < v_max_tombamento_ms ? 'Derrapagem' : 'Tombamento';
 
-            // 6. Preparar dados para exibição
             const resultsDataA = [
                 { label: 'Velocidade Máxima', value_ms: v_max_a, color: 'text-red-400' },
                 { label: 'Velocidade de Segurança', value_ms: v_seg_ms, color: 'text-blue-400' },
@@ -313,7 +325,6 @@
             displayResult('results_b', resultsDataB);
         }
 
-        // --- MODAL DO VÍDEO ---
         const videoModal = document.getElementById('videoModal');
         const videoBtn = document.getElementById('videoBtn');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -326,19 +337,16 @@
         };
         closeModalBtn.onclick = () => {
             videoModal.classList.add('hidden');
-            youtubeVideo.src = ''; // Para o vídeo ao fechar
+            youtubeVideo.src = '';
         };
         videoModal.onclick = (e) => {
-            if (e.target === videoModal) {
-                closeModalBtn.click();
-            }
+            if (e.target === videoModal) closeModalBtn.click();
         };
 
-        // --- INICIALIZAÇÃO ---
         window.onload = () => {
             populateDropdowns();
             updateFromPreset('raio');
-            updateFromPreset('atrito'); // Chama duas vezes para garantir que ambos os defaults sejam carregados.
+            updateFromPreset('atrito');
         };
     </script>
 </body>
